@@ -66,6 +66,11 @@ def preprocess_transaction(raw_df):
     df['origIsMerchant'] = df['nameOrig'].str.startswith('M').astype(int)
     df['destIsMerchant'] = df['nameDest'].str.startswith('M').astype(int)
 
+    # Graph features: default to 0 for accounts not in the training graph
+    # (this includes all new accounts at inference time in production).
+    df['dest_in_degree'] = 0
+    df['orig_out_degree'] = 0
+
     df = pd.get_dummies(df, columns=['type'], prefix='type', drop_first=True)
     drop_cols = [c for c in ['nameOrig', 'nameDest', 'isFraud', 'isFlaggedFraud']
                  if c in df.columns]

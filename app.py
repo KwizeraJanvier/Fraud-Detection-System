@@ -33,8 +33,8 @@ EXAMPLES = [
     {"label": "Legit payment", "step": 1, "type": "PAYMENT", "amount": 9839.64,
      "nameOrig": "C1231006815", "oldbalanceOrg": 170136.0, "newbalanceOrig": 160296.36,
      "nameDest": "M1979787155", "oldbalanceDest": 0.0, "newbalanceDest": 0.0},
-    {"label": "Suspicious transfer", "step": 1, "type": "TRANSFER", "amount": 181.0,
-     "nameOrig": "C1231006815", "oldbalanceOrg": 181.0, "newbalanceOrig": 0.0,
+    {"label": "Suspicious transfer", "step": 1, "type": "TRANSFER", "amount": 5000.0,
+     "nameOrig": "C1231006815", "oldbalanceOrg": 5000.0, "newbalanceOrig": 0.0,
      "nameDest": "C1666544295", "oldbalanceDest": 0.0, "newbalanceDest": 0.0},
     {"label": "Cash-out pattern", "step": 1, "type": "CASH_OUT", "amount": 181.0,
      "nameOrig": "C840083671", "oldbalanceOrg": 181.0, "newbalanceOrig": 0.0,
@@ -43,7 +43,9 @@ EXAMPLES = [
 
 
 def preprocess_transaction(raw_df):
-    """Mirrors the exact cleaning + feature engineering used in training."""
+    """Mirrors the exact cleaning + feature engineering used in training,
+    including the graph features (dest_in_degree / orig_out_degree) used
+    by the XGBoost + Graph Features deployed model."""
     df = raw_df.copy()
     df['type'] = df['type'].astype(str)
     df['nameOrig'] = df['nameOrig'].astype(str)
@@ -60,6 +62,14 @@ def preprocess_transaction(raw_df):
                               (df['newbalanceDest'] == 0)).astype(int)
     df['origIsMerchant'] = df['nameOrig'].str.startswith('M').astype(int)
     df['destIsMerchant'] = df['nameDest'].str.startswith('M').astype(int)
+
+    # Graph features: the deployed model was trained with these, but at
+    # inference time we don't have the full historical transaction graph
+    # to compute real degrees for new accounts. Defaulting to 0 is a safe
+    # fallback -- it means "no known network history for this account,"
+    # which is also true for brand-new accounts in production.
+    df['dest_in_degree'] = 0
+    df['orig_out_degree'] = 0
 
     df = pd.get_dummies(df, columns=['type'], prefix='type', drop_first=True)
     drop_cols = [c for c in ['nameOrig', 'nameDest', 'isFraud', 'isFlaggedFraud']

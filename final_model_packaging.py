@@ -134,9 +134,9 @@ print("This single file contains everything needed to score new transactions.")
 sample_transaction = pd.DataFrame([{
     "step": 1,
     "type": "TRANSFER",
-    "amount": 181.0,
+    "amount": 5000.0,
     "nameOrig": "C1231006815",
-    "oldbalanceOrg": 181.0,
+    "oldbalanceOrg": 5000.0,
     "newbalanceOrig": 0.0,
     "nameDest": "C1666544295",
     "oldbalanceDest": 0.0,

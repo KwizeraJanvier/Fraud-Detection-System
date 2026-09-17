@@ -38,7 +38,18 @@ def preprocess_transaction(raw_df, feature_columns):
     df['dest_in_degree'] = 0
     df['orig_out_degree'] = 0
 
-    df = pd.get_dummies(df, columns=['type'], prefix='type', drop_first=True)
+    # BUG FIX: pd.get_dummies() only creates columns for categories actually
+    # present in this batch -- a batch missing some transaction types (or a
+    # single-row batch) would silently produce incomplete dummy columns.
+    # Instead, explicitly build each expected type_* column by checking the
+    # raw 'type' value directly, using the exact dummy names the model
+    # expects (feature_columns), so results are correct regardless of batch size.
+    type_dummy_cols = [c for c in feature_columns if c.startswith('type_')]
+    for col in type_dummy_cols:
+        category = col[len('type_'):]
+        df[col] = (df['type'] == category).astype(int)
+    df = df.drop(columns=['type'])
+
     drop_cols = [c for c in ['nameOrig', 'nameDest', 'isFraud', 'isFlaggedFraud']
                  if c in df.columns]
     df = df.drop(columns=drop_cols)

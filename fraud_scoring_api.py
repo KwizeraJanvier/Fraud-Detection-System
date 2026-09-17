@@ -71,7 +71,18 @@ def preprocess_transaction(raw_df):
     df['dest_in_degree'] = 0
     df['orig_out_degree'] = 0
 
-    df = pd.get_dummies(df, columns=['type'], prefix='type', drop_first=True)
+    # BUG FIX: pd.get_dummies() on a single-row DataFrame only creates a
+    # column for whichever category is present in that one row -- it can't
+    # recreate the multi-category dummy structure the model was trained on.
+    # Instead, explicitly build each expected type_* column by checking the
+    # raw 'type' value directly, using the exact dummy names the model
+    # expects (feature_columns), so the correct column is always set to 1.
+    type_dummy_cols = [c for c in feature_columns if c.startswith('type_')]
+    for col in type_dummy_cols:
+        category = col[len('type_'):]
+        df[col] = (df['type'] == category).astype(int)
+    df = df.drop(columns=['type'])
+
     drop_cols = [c for c in ['nameOrig', 'nameDest', 'isFraud', 'isFlaggedFraud']
                  if c in df.columns]
     df = df.drop(columns=drop_cols)
